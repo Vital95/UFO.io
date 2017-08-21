@@ -1,0 +1,75 @@
+R Markdown Presentation And Plotly : UFO research (dataset source Kaggle)
+========================================================
+author: Vital
+date: 2017-08-21
+autosize: true
+
+UFO encounters distribution by shape
+========================================================
+
+```{r, echo=FALSE}
+
+library(lubridate)
+library(plotly)
+library(dplyr)
+UFO <- read.csv("UFO.txt", header = FALSE)
+header <- c("time","city","state","country","shape","length_of_encounter_seconds","described_duration _of_encounter","description","date_documented","latitude","longitude")
+names(UFO) <- header
+UFOCleaned <- UFO[,c(1,5,6,10,11)]
+UFOCleaned$time <- as.character(UFOCleaned$time)
+UFOCleaned$time <-as.Date(UFOCleaned$time,"%m/%d/%Y")
+UFOCleaned$time <-year(UFOCleaned$time)
+UFOCleaned <- UFOCleaned[complete.cases(UFOCleaned), ]
+
+Sys.setenv('MAPBOX_TOKEN' = 'pk.eyJ1Ijoidml0YWxpaTczIiwiYSI6ImNqNm1rNzByeTF0ZDkycWxtbjVwNmk4ZHkifQ.YKVUpyu-NZlJosvX1ydKCA')
+
+p <- UFOCleaned %>%
+  plot_mapbox(lat = ~latitude, lon = ~longitude,
+              split = ~shape, size=2,
+              mode = 'scattermapbox', hoverinfo='info') %>%
+  layout(title = 'UFO encounters distribution by shape',
+         font = list(color='white'),
+         plot_bgcolor = '#191A1A', paper_bgcolor = '#191A1A',
+         mapbox = list(style = 'dark'),
+         legend = list(orientation = 'h',
+                       font = list(size = 7)),
+         margin = list(l = 25, r = 25,
+                       b = 25, t = 25,
+                       pad = 2))
+
+htmlwidgets::saveWidget(as.widget(p), file = "map.html")
+
+```
+<iframe src="map.html" style="position:absolute;height:100%;width:100%"></iframe>
+
+Number of encounters with UFO by year between 1950 - 2014
+========================================================
+
+```{r, echo=FALSE}
+p <- plot_ly(x = ~UFOCleaned$time,
+             type = "histogram",
+             histnorm = "density",
+             autobiny = FALSE,
+             )
+htmlwidgets::saveWidget(as.widget(p), file = "hist.html")
+```
+<iframe src="hist.html" style="position:absolute;height:100%;width:100%"></iframe>
+
+Average length of encounter in seconds by shape
+========================================================
+```{r, echo=FALSE}
+
+dfU <- UFOCleaned[,c(2,3)]
+dfU$length_of_encounter_seconds <- as.numeric(dfU$length_of_encounter_seconds)
+dfU$shape <- as.character(dfU$shape)
+grouped <- group_by(dfU,shape)
+resByShape <- summarize(grouped, mean(length_of_encounter_seconds))
+names(resByShape) <- names(grouped)
+p <- plot_ly(resByShape, labels = ~shape, values = ~length_of_encounter_seconds, type = 'pie') %>%
+  layout(title = 'Average length of encounter in seconds by shape',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+htmlwidgets::saveWidget(as.widget(p), file = "pie.html")
+```
+
+<iframe src="pie.html" style="position:absolute;height:100%;width:100%"></iframe>
